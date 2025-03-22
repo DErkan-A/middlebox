@@ -12,12 +12,12 @@ async def run():
     async def message_handler(msg):
         subject = msg.subject
         data = msg.data #.decode()
-        #print(f"Received a message on '{subject}': {data}")
+        print(f"Received a message on '{subject}': {data}")
         packet = Ether(data)
         print(packet.show())
         # Publish the received message to outpktsec and outpktinsec
-        #delay = random.expovariate(1 / 5e-6)
-        #await asyncio.sleep(delay)
+        delay = random.expovariate(1 / 8e-3)
+        await asyncio.sleep(delay)
         if subject == "inpktsec":
             await nc.publish("outpktinsec", msg.data)
         else:
