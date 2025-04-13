@@ -1,35 +1,71 @@
-import socket, os
-from scapy.all import sniff, UDP, IP
+import os
+import argparse
+from scapy.all import sniff, IP, send
+from collections import deque
 
-def udp_packet_handler(packet):
-    """
-    Callback function to process each captured UDP packet.
-    It extracts the source IP, source port, destination port, and payload.
-    """
-    print("received")
-    # Check if packet has a UDP layer
-    if UDP in packet and IP in packet:
-        src_ip = packet[IP].src
-        src_port = packet[UDP].sport
-        dst_port = packet[UDP].dport
-        # Extract the UDP payload as bytes and attempt to decode it
-        payload = bytes(packet[UDP].payload)
-        try:
-            payload_text = payload.decode('utf-8')
-        except UnicodeDecodeError:
-            payload_text = payload
-        print(f"Received UDP packet from {src_ip}:{src_port} to port {dst_port} with payload: {payload_text}")
+chunk_size = 6
 
-def udp_receiver():
-    """
-    Sniffs for incoming UDP traffic on all interfaces.
-    Adjust the BPF filter if you want to restrict to a specific port.
-    """
-    print("Listening for UDP traffic...")
-    # Optionally, restrict to port 8888 (as used by the sender) by uncommenting the filter below:
-    filter_str = "udp and port 8888"
-    sniff(filter=filter_str, prn=udp_packet_handler, store=False)
-    #sniff(filter="udp", prn=udp_packet_handler, store=False)
+class Receiver:
+    def __init__(self, sender_ip):
+        self.sender_ip = sender_ip
+        self.message = ""
+        self.chunk_buffer = []
+        self.recent_seq_nums = deque(maxlen=16)  # Track last 16 sequence numbers
+
+    def send_ack(self):
+        """Send ACK (6), multiple times."""
+        for _ in range(7):
+            pkt = IP(dst=self.sender_ip, proto=6)
+            send(pkt, verbose=False)
+        print("Sent ACK: proto=6")
+
+    def process_packet(self, pkt):
+        if IP in pkt and pkt[IP].src == self.sender_ip:
+            proto_val = pkt[IP].proto
+            print(f"Received: proto={proto_val}, char='{chr(proto_val) if 32 <= proto_val <= 126 else ''}'")
+            # Append all packets (no SOT reset to handle out-of-order delivery)
+            self.chunk_buffer.append(proto_val)
+            if len(self.chunk_buffer) == chunk_size + 3:  # 6 data + SOT + seq_num + EOT = 9
+                self.process_chunk()
+
+    def process_chunk(self):
+        """Validate and process chunk."""
+        print("Processing")
+        if (len(self.chunk_buffer) == 9 and 
+            self.chunk_buffer[0] == 1 and 
+            self.chunk_buffer[-1] == 4):
+            seq_num = self.chunk_buffer[-2]  # Sequence number is second-to-last packet
+            if seq_num not in self.recent_seq_nums:
+                data = [chr(p) for p in self.chunk_buffer[1:7] if p != 0]  # Data packets 2–7
+                self.message += ''.join(data)
+                self.recent_seq_nums.append(seq_num)
+                print(f"Valid chunk received, seq={seq_num}, message='{self.message}'")
+            else:
+                print(f"Duplicate chunk, seq={seq_num}, sending ACK")
+            self.send_ack()
+        else:
+            print("Invalid chunk, no ACK sent")
+        self.chunk_buffer = []
+
+def covert_receive(interface):
+    print(f"Sniffing for covert channel packets from {ALLOWED_IP} on interface '{interface}'...")
+    receiver = Receiver(ALLOWED_IP)
+    
+    try:
+        sniff(iface=interface, filter=f"ip and src host {ALLOWED_IP}", 
+              prn=receiver.process_packet, store=False)
+    except Exception as e:
+        print(f"An error occurred while sniffing: {e}")
 
 if __name__ == "__main__":
-    udp_receiver()
+    parser = argparse.ArgumentParser(description="Covert Receiver: Sniff for covert channel packets")
+    parser.add_argument("-i", "--iface", type=str, default="eth0",
+                        help="Network interface to sniff on (default: eth0)")
+    args = parser.parse_args()
+    
+    ALLOWED_IP = os.getenv("SECURENET_HOST_IP")
+    if not ALLOWED_IP:
+        print("Environment variable SECURENET_HOST_IP is not set.")
+        exit(1)
+    
+    covert_receive(args.iface)
