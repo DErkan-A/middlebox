@@ -3,7 +3,7 @@ import argparse
 import time
 from scapy.all import sniff, IP, send
 from collections import deque
-
+import time
 chunk_size = 6
 class Receiver:
     def __init__(self, sender_ip):
@@ -31,11 +31,12 @@ class Receiver:
     def process_chunk(self):
         """Validate and process chunk."""
         print("Processing")
-        if (len(self.chunk_buffer) == chunk_size + 3 and 
+        if (len(self.chunk_buffer) == 9 and 
             self.chunk_buffer[0] == 1 and 
             self.chunk_buffer[-1] == 4):
             seq_num = self.chunk_buffer[-2]  # Sequence number is second-to-last packet
             if seq_num not in self.recent_seq_nums:
+                data = [chr(p) for p in self.chunk_buffer[1:chunk_size+1] if p != 0]  # Data packets 2–7
                 data = [chr(p) for p in self.chunk_buffer[1:chunk_size+1] if p != 0]  # Data packets 2–7
                 self.message += ''.join(data)
                 self.recent_seq_nums.append(seq_num)
