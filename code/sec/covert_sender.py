@@ -1,11 +1,14 @@
 import os
 import time
 import argparse
+import random
+import string
 from scapy.all import IP, send, sniff
 from scapy.config import conf
 
-chunk_size = 6  # Data packets per chunk (excluding SOT, seq_num, EOT)
-
+chunk_size = 8  # Data packets per chunk (excluding SOT, seq_num, EOT)
+benchmark_data_size = 16 #Data size in bytes
+benchmark_repetitions = 10 #Number of times the benchmark is repeated
 def encode_packet(char):
     """Encode a character or value into the protocol field."""
     return ord(char) if isinstance(char, str) else char
@@ -73,6 +76,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Covert Sender: Send covert channel packets")
     parser.add_argument("-i", "--iface", type=str, default="eth0",
                         help="Network interface to use (default: eth0)")
+    parser.add_argument("--benchmark", action="store_true",
+                        help="Send 1MB of random data for benchmarking")
     args = parser.parse_args()
     
     destination_ip = os.getenv('INSECURENET_HOST_IP')
@@ -80,5 +85,11 @@ if __name__ == "__main__":
         print("Environment variable INSECURENET_HOST_IP is not set.")
         exit(1)
     
-    covert_message = "HELLO WORLD ABCDEFGHJKLMNOP ASDQWERTH"
+    if args.benchmark:
+        # Generate 1MB of random ASCII data (printable characters)
+        covert_message = ''.join(random.choices(string.ascii_letters + string.digits, k=benchmark_data_size))
+        print(f"Generated random data for benchmarking")
+    else:
+        covert_message = "HELLO WORLD"
+    
     covert_send(destination_ip, covert_message, args.iface)
