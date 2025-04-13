@@ -36,7 +36,7 @@ def wait_for_response(dst_ip, timeout, iface):
     got_ack = False
     
     # Filter for ACK (6) or expected seq_num
-    packets = sniff(iface=iface, 
+    packets = sniff(iface=iface, timeout = timeout,
                     filter=f"ip and src host {dst_ip}",count=1)
     if packets:
         proto_val = packets[0][IP].proto
