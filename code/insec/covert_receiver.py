@@ -12,12 +12,13 @@ class Receiver:
         self.chunk_buffer = []
         self.recent_seq_nums = deque(maxlen=16)  # Track last 16 sequence numbers
 
-    def send_ack(self):
-        """Send ACK (6), multiple times."""
-        for _ in range(7):
-            pkt = IP(dst=self.sender_ip, proto=6)
-            send(pkt, verbose=False)
-        print("Sent ACK: proto=6")
+    def send_ack(self, seq_num):
+        """Send single ACK (6) followed by sequence number."""
+        pkt_ack = IP(dst=self.sender_ip, proto=6)
+        send(pkt_ack, verbose=False)
+        pkt_seq = IP(dst=self.sender_ip, proto=seq_num)
+        send(pkt_seq, verbose=False)
+        print(f"Sent ACK: proto=6, SEQ={seq_num}")
 
     def process_packet(self, pkt):
         if IP in pkt and pkt[IP].src == self.sender_ip:
@@ -31,7 +32,7 @@ class Receiver:
     def process_chunk(self):
         """Validate and process chunk."""
         print("Processing")
-        if (len(self.chunk_buffer) == 9 and 
+        if (len(self.chunk_buffer) == chunk_size + 3 and 
             self.chunk_buffer[0] == 1 and 
             self.chunk_buffer[-1] == 4):
             seq_num = self.chunk_buffer[-2]  # Sequence number is second-to-last packet
@@ -42,7 +43,7 @@ class Receiver:
                 print(f"Valid chunk received, seq={seq_num}, message='{self.message}'")
             else:
                 print(f"Duplicate chunk, seq={seq_num}, sending ACK")
-            self.send_ack()
+            self.send_ack(seq_num)
         else:
             print("Invalid chunk, no ACK sent")
         self.chunk_buffer = []
