@@ -6,9 +6,9 @@ import string
 from scapy.all import IP, send, sniff
 from scapy.config import conf
 
-chunk_size = 8  # Data packets per chunk (excluding SOT, seq_num, EOT)
-benchmark_data_size = 16 #Data size in bytes
-benchmark_repetitions = 10 #Number of times the benchmark is repeated
+chunk_size = 64 # Data packets per chunk (excluding SOT, seq_num, EOT)
+benchmark_data_size = chunk_size * 30 #Data size in bytes
+
 def encode_packet(char):
     """Encode a character or value into the protocol field."""
     return ord(char) if isinstance(char, str) else char
@@ -62,7 +62,7 @@ def covert_send(dst_ip, message, iface):
         while True:
             print(f"Sending chunk: {chunk_data}, seq={seq_num}, timeout={rtt_estimate:.3f}s")
             send_chunk(dst_ip, chunk_data, seq_num)
-            success, rtt = wait_for_response(dst_ip, rtt_estimate, iface)
+            success, rtt = wait_for_response(dst_ip, 2*rtt_estimate, iface)
             if success:
                 rtt_estimate = 0.6 * rtt_estimate + 0.4 * max(rtt, 0.01)
                 print(f"Updated RTT estimate: {rtt_estimate:.3f}s")
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     
     if args.benchmark:
         # Generate 1MB of random ASCII data (printable characters)
-        covert_message = ''.join(random.choices(string.ascii_letters + string.digits, k=benchmark_data_size))
+        covert_message = ''.join(random.choices(string.ascii_letters, k=benchmark_data_size))
         print(f"Generated random data for benchmarking")
     else:
         covert_message = "HELLO WORLD"

@@ -4,9 +4,9 @@ import time
 from scapy.all import sniff, IP, send
 from collections import deque
 
-chunk_size = 8
-benchmark_data_size = 16 #Data size in bytes
-benchmark_repetitions = 10 #Number of times the benchmark is repeated
+chunk_size = 64
+benchmark_data_size = chunk_size #Data size in bytes in which receiver measure and records the latency
+
 class Receiver:
     def __init__(self, sender_ip, benchmark=False):
         self.sender_ip = sender_ip
@@ -39,25 +39,30 @@ class Receiver:
     def process_chunk(self):
         """Validate and process chunk."""
         print("Processing")
+        bench_flag = True
         if (len(self.chunk_buffer) == chunk_size + 3 and 
             self.chunk_buffer[0] == 1 and 
             self.chunk_buffer[-1] == 4):
             seq_num = self.chunk_buffer[-2]  # Sequence number is second-to-last packet
             if seq_num not in self.recent_seq_nums:
                 data = [chr(p) for p in self.chunk_buffer[1:chunk_size+1] if p != 0]  # Data packets 2–7
-                self.message += ''.join(data)
+                #self.message += ''.join(data)
                 self.recent_seq_nums.append(seq_num)
                 print(f"Valid chunk received, seq={seq_num}, message_len={len(self.message)}")
             else:
                 print(f"Duplicate chunk, seq={seq_num}, sending ACK")
+                bench_flag = False
             self.send_ack()
-            # Update total bytes for benchmark
-            if self.benchmark:
-                self.total_bytes_received += len(data)
-                # Check if we've received approximately 1MB
-                if self.total_bytes_received >= benchmark_data_size:
-                    self.calculate_throughput()
-                    return  # Stop processing to end benchmark
+            if bench_flag:
+                # Update total bytes for benchmark
+                if self.benchmark:
+                    self.total_bytes_received += len(data)
+                    # Check if we've received approximately 1MB
+                    if self.total_bytes_received >= benchmark_data_size:
+                        self.calculate_throughput()
+                        self.start_time = time.time()  # Reset timer
+                        self.total_bytes_received = 0  # Reset for next round
+
         else:
             print("Invalid chunk, no ACK sent")
         self.chunk_buffer = []
@@ -70,19 +75,19 @@ class Receiver:
         elapsed_time = end_time - self.start_time
         if elapsed_time > 0:
             throughput_Bps = self.total_bytes_received / elapsed_time
-            print(f"\nBenchmark Complete:")
+            print(f"\nBenchmark Round Complete:")
             print(f"Total Data Received: {self.total_bytes_received} bytes")
             print(f"Elapsed Time: {elapsed_time:.2f} seconds")
             print(f"Throughput: {throughput_Bps:.2f} B/s")
-            # Write result to file
+            # Append result to file
             try:
-                with open("benchmark_result.txt", "w") as f:
+                with open("benchmark_result.txt", "a") as f:
                     f.write(f"{elapsed_time:.6f}\n")
-                    self.total_bytes_received = 0
             except Exception as e:
                 print(f"Failed to write benchmark result to file: {e}")
         else:
             print("Elapsed time too small to calculate throughput.")
+
 
 def covert_receive(interface, benchmark_flag):
     print(f"Sniffing for covert channel packets from {ALLOWED_IP} on interface '{interface}'...")
