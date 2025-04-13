@@ -29,25 +29,23 @@ def send_chunk(dst_ip, chunk_data, seq_num):
     
     return packets
 
-def wait_for_response(dst_ip, timeout, iface, expected_seq):
+def wait_for_response(dst_ip, timeout, iface):
     """Wait for ACK (6) and sequence number packet."""
     conf.use_pcap = True
     start_time = time.time()
     got_ack = False
     
-    while time.time() - start_time < timeout:
-        # Filter for ACK (6) or expected seq_num
-        packets = sniff(iface=iface, 
-                       filter=f"ip and src host {dst_ip}",
-                       timeout=1, count=1)
-        if packets:
-            proto_val = packets[0][IP].proto
-            rtt = time.time() - start_time
-            if proto_val == 6:
-                got_ack = True
-                print(f"Received ACK, measured RTT={rtt:.3f}s")
-            if got_ack:
-                return True, rtt
+    # Filter for ACK (6) or expected seq_num
+    packets = sniff(iface=iface, 
+                    filter=f"ip and src host {dst_ip}",count=1)
+    if packets:
+        proto_val = packets[0][IP].proto
+        rtt = time.time() - start_time
+        if proto_val == 6:
+            got_ack = True
+            print(f"Received ACK, measured RTT={rtt:.3f}s")
+        if got_ack:
+            return True, rtt
     print(f"Timeout after {timeout:.3f}s, got_ack={got_ack}")
     return False, timeout
 
@@ -61,7 +59,7 @@ def covert_send(dst_ip, message, iface):
         while True:
             print(f"Sending chunk: {chunk_data}, seq={seq_num}, timeout={rtt_estimate:.3f}s")
             send_chunk(dst_ip, chunk_data, seq_num)
-            success, rtt = wait_for_response(dst_ip, rtt_estimate, iface, seq_num)
+            success, rtt = wait_for_response(dst_ip, rtt_estimate, iface)
             if success:
                 rtt_estimate = 0.6 * rtt_estimate + 0.4 * max(rtt, 0.01)
                 print(f"Updated RTT estimate: {rtt_estimate:.3f}s")
