@@ -35,12 +35,11 @@ def ack_listener(dst_ip, iface, last_acked_seq, lock):
     """Thread to continuously read ACKs and update last_acked_seq."""
     conf.use_pcap = True
     expected_ack = False
-    expected_seq = None
     
     while True:
-        # Filter for ACK=6 or any seq_num (0–255)
+        # Filter for packets from dst_ip
         packets = sniff(iface=iface, 
-                       filter=f"ip and src host {dst_ip} and (ip proto 6 or ip proto 0-255)",
+                       filter=f"ip and src host {dst_ip}",
                        timeout=0.1, count=1)
         if packets:
             proto_val = packets[0][IP].proto
@@ -48,14 +47,13 @@ def ack_listener(dst_ip, iface, last_acked_seq, lock):
             if proto_val == 6:
                 expected_ack = True
                 print(f"Received ACK, time={rtt:.3f}s")
-            elif expected_ack and 0 <= proto_val <= 255:
+            elif expected_ack:
                 with lock:
                     if proto_val > last_acked_seq[0] or (
                         proto_val == 0 and last_acked_seq[0] == 255):
                         last_acked_seq[0] = proto_val
                         print(f"Updated last_acked_seq={proto_val}, time={rtt:.3f}s")
                 expected_ack = False
-                expected_seq = None
 
 def covert_send(dst_ip, message, iface):
     rtt_estimate = 3.0  # Initial timeout
