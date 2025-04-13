@@ -4,7 +4,6 @@ from scapy.all import sniff, IP, send
 from collections import deque
 
 chunk_size = 6
-
 class Receiver:
     def __init__(self, sender_ip):
         self.sender_ip = sender_ip
@@ -12,13 +11,11 @@ class Receiver:
         self.chunk_buffer = []
         self.recent_seq_nums = deque(maxlen=16)  # Track last 16 sequence numbers
 
-    def send_ack(self, seq_num):
+    def send_ack(self):
         """Send single ACK (6) followed by sequence number."""
         pkt_ack = IP(dst=self.sender_ip, proto=6)
         send(pkt_ack, verbose=False)
-        pkt_seq = IP(dst=self.sender_ip, proto=seq_num)
-        send(pkt_seq, verbose=False)
-        print(f"Sent ACK: proto=6, SEQ={seq_num}")
+        print(f"Sent ACK: proto=6")
 
     def process_packet(self, pkt):
         if IP in pkt and pkt[IP].src == self.sender_ip:
@@ -37,21 +34,20 @@ class Receiver:
             self.chunk_buffer[-1] == 4):
             seq_num = self.chunk_buffer[-2]  # Sequence number is second-to-last packet
             if seq_num not in self.recent_seq_nums:
-                data = [chr(p) for p in self.chunk_buffer[1:7] if p != 0]  # Data packets 2–7
+                data = [chr(p) for p in self.chunk_buffer[1:chunk_size+1] if p != 0]  # Data packets 2–7
                 self.message += ''.join(data)
                 self.recent_seq_nums.append(seq_num)
                 print(f"Valid chunk received, seq={seq_num}, message='{self.message}'")
             else:
                 print(f"Duplicate chunk, seq={seq_num}, sending ACK")
-            self.send_ack(seq_num)
+            self.send_ack()
         else:
             print("Invalid chunk, no ACK sent")
         self.chunk_buffer = []
 
 def covert_receive(interface):
     print(f"Sniffing for covert channel packets from {ALLOWED_IP} on interface '{interface}'...")
-    receiver = Receiver(ALLOWED_IP)
-    
+    receiver = Receiver(ALLOWED_IP) 
     try:
         sniff(iface=interface, filter=f"ip and src host {ALLOWED_IP}", 
               prn=receiver.process_packet, store=False)
