@@ -67,7 +67,7 @@ def covert_send(dst_ip, message, iface):
                 break
             else:
                 print("Retransmitting chunk")
-                rtt_estimate = min(rtt_estimate * 1.5, 4.0)
+                rtt_estimate = min(rtt_estimate * 2, 4.0)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Covert Sender: Send covert channel packets")
@@ -80,5 +80,5 @@ if __name__ == "__main__":
         print("Environment variable INSECURENET_HOST_IP is not set.")
         exit(1)
     
-    covert_message = "HELLO WORLD"
+    covert_message = "HELLO WORLD ABCDEFGHJKLMNOP ASDQWERTH"
     covert_send(destination_ip, covert_message, args.iface)

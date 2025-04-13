@@ -14,7 +14,7 @@ class Receiver:
 
     def send_ack(self):
         """Send single ACK (6) followed by sequence number."""
-        time.sleep(1)  # 1ms delay to reduce network overload
+        time.sleep(0.3)  # 1ms delay to reduce network overload
         pkt_ack = IP(dst=self.sender_ip, proto=6)
         send(pkt_ack, verbose=False)
         print(f"Sent ACK: proto=6")
