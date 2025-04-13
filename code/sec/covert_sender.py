@@ -117,5 +117,5 @@ if __name__ == "__main__":
         print("Environment variable INSECURENET_HOST_IP is not set.")
         exit(1)
     
-    covert_message = "HELLO WORLD"
+    covert_message = "WORLD qwert yuioop asdfghgjk zxcbbnn"
     covert_send(destination_ip, covert_message, args.iface)

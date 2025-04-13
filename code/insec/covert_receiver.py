@@ -2,7 +2,7 @@ import os
 import argparse
 from scapy.all import sniff, IP, send
 from collections import deque
-
+import time
 chunk_size = 6
 
 class Receiver:
@@ -14,6 +14,7 @@ class Receiver:
 
     def send_ack(self, seq_num):
         """Send single ACK (6) followed by sequence number."""
+        time.sleep(1)  # 1 s delay to reduce network overload
         pkt_ack = IP(dst=self.sender_ip, proto=6)
         send(pkt_ack, verbose=False)
         pkt_seq = IP(dst=self.sender_ip, proto=seq_num)
