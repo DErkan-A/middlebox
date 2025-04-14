@@ -4,7 +4,7 @@ import time
 from scapy.all import sniff, IP, send
 from collections import deque
 
-chunk_size = 64
+chunk_size = 8
 benchmark_data_size = chunk_size #Data size in bytes in which receiver measure and records the latency
 
 class Receiver:

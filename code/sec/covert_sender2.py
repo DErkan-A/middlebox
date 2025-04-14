@@ -53,5 +53,5 @@ def send_covert_message(src_ip, dst_ip, message):
 if __name__ == "__main__":
     SRC_IP = os.getenv("SECURENET_HOST_IP")  # Sender's IP
     DST_IP = os.getenv("INSECURENET_HOST_IP")  # Receiver's IP
-    MESSAGE = "HELLO"          # Message to send
+    MESSAGE = "HELLO INSECURENET I AM YOUR COVERT SENDER GUY"          # Message to send
     send_covert_message(SRC_IP, DST_IP, MESSAGE)

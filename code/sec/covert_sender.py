@@ -6,30 +6,27 @@ import string
 from scapy.all import IP, send, sniff
 from scapy.config import conf
 
-chunk_size = 64 # Data packets per chunk (excluding SOT, seq_num, EOT)
-benchmark_data_size = chunk_size * 30 #Data size in bytes
+chunk_size = 8 # Data packets per chunk (excluding SOT, seq_num, EOT)
+benchmark_data_size = chunk_size * 1 #Data size in bytes
 
 def encode_packet(char):
     """Encode a character or value into the protocol field."""
     return ord(char) if isinstance(char, str) else char
 
 def send_chunk(dst_ip, chunk_data, seq_num):
-    """Send a chunk of 9 packets: SOT, 6 data (or NUL), seq_num, EOT."""
     packets = []
-    packets.append((1, 'SOT'))  # proto=1
+    packets.append(IP(dst=dst_ip, proto=1))  # SOT
     for i in range(chunk_size):
         if i < len(chunk_data):
-            packets.append((ord(chunk_data[i]), chunk_data[i]))
+            packets.append(IP(dst=dst_ip, proto=ord(chunk_data[i])))
         else:
-            packets.append((0, 'NUL'))
-    packets.append((seq_num, f'SEQ{seq_num}'))  # Sequence number
-    packets.append((4, 'EOT'))  # proto=4
+            packets.append(IP(dst=dst_ip, proto=0))  # Padding with NUL
+    packets.append(IP(dst=dst_ip, proto=seq_num))  # Sequence number
+    packets.append(IP(dst=dst_ip, proto=4))  # EOT
     
-    for proto_val, label in packets:
-        pkt = IP(dst=dst_ip, proto=proto_val)
-        send(pkt, verbose=False)
-        print(f"Sent packet: proto={proto_val}, label='{label}'")
-    
+    # Send all packets at once
+    send(packets, verbose=False)
+    print(f"Sent chunk with seq={seq_num}")
     return packets
 
 def wait_for_response(dst_ip, timeout, iface):
