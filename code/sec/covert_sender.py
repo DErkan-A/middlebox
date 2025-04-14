@@ -1,11 +1,22 @@
-import covert_send_lib
+import covert_send_lib as covert_channel
 import os
 import argparse
-import random
+import time
+
+benchmark_iteration = 30
+def benchmark(data_size):
+    covert_message = bytes([5]) * data_size
+    print(f"Generated data for sending")
+    covert_channel.send_data(destination_ip, covert_message)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Covert Sender: Send covert channel packets")
     parser.add_argument("-i", "--iface", type=str, default="eth0",
                         help="Network interface to use (default: eth0)")
+    parser.add_argument("--benchmark",type=int, default=0,
+                        help="Calculate throughput for random data")
+    parser.add_argument("--message",type=str, default="HELLO INSECURENET",
+                        help="Calculate throughput for random data")
     args = parser.parse_args()
     
     destination_ip = os.getenv('INSECURENET_HOST_IP')
@@ -13,9 +24,9 @@ if __name__ == "__main__":
         print("Environment variable INSECURENET_HOST_IP is not set.")
         exit(1)
     
-    # For testing, use a mix of ASCII and non-ASCII bytes
-    #covert_message = b"HELLO\x00\xFF\x80WORLD"
-    covert_message = [10,12,11,13,20,25,26,100,200,255,16,28,30]
-    print(f"Generated data for sending")
-    
-    covert_send_lib.send_data(destination_ip, covert_message)
+    if args.benchmark != 0:
+        for i in range(benchmark_iteration):
+            benchmark(args.benchmark)
+            time.sleep(5)
+    else:
+       covert_channel.send_data(destination_ip, args.message)
