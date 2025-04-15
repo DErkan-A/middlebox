@@ -1,4 +1,4 @@
-import covert_receive_lib as covert_channel
+import covert_receive_lib_binary as covert_channel
 import os
 import argparse
 import time
@@ -10,7 +10,7 @@ def benchmark(receiver, expected_size):
     # Example: Main thread interacts with the shared buffer
     import time
     while(len(full_message)< expected_size):  # Run for a few iterations as a demo
-        time.sleep(0.01)  # Wait to collect some packets
+        time.sleep(0.1)  # Wait to collect some packets
         message = receiver.get_message()
         #print(message)
         if(len(full_message)== 0):

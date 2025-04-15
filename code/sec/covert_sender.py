@@ -1,4 +1,4 @@
-import covert_send_lib as covert_channel
+import covert_send_lib_binary as covert_channel
 import os
 import argparse
 import time
