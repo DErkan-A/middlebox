@@ -1,7 +1,8 @@
 # Notes for Phase 2
 
-Use the covert sender receiver with the `--benchmark` option to record time and throughput. For example, `python covert_receiver.py --benchmark 32` will expect and time 32 B of data.
+Use the covert sender receiver with the `--benchmark` option to record time and throughput. For example, `python covert_receiver.py --benchmark 32` will expect and time 32 B of data. It runs for 30 iterations and saves the timing information to a text file.
 
+For both the sender and receiver covert channel has 2 different implementations in `*_lib` and `*_lib_binary` files. In the sender and receiver script user can import one or the other for whichever covert channel version they want to use.
 # Middlebox Development Environment
 
 ## Requirements
