@@ -1,8 +1,6 @@
 # Notes for Phase 2
 
-Use the covert sender receiver with the `--benchmark` option to record time and throughput.
-
-Receiver and Sender `chunk_size` defined at the topmost part of their respective files must be the same.
+Use the covert sender receiver with the `--benchmark` option to record time and throughput. For example, `python covert_receiver.py --benchmark 32` will expect and time 32 B of data.
 
 # Middlebox Development Environment
 
