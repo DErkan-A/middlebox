@@ -5,7 +5,9 @@ import time
 
 benchmark_iteration = 30
 def benchmark(data_size):
-    covert_message = bytes([5]) * data_size
+    # generate data_size random bytes
+    covert_message = os.urandom(data_size)
+    print(covert_message)
     print(f"Generated data for sending")
     covert_channel.send_data(destination_ip, covert_message)
 

@@ -1,5 +1,4 @@
-import os
-import argparse
+import random
 import time
 from scapy.all import IP, TCP, UDP, send
 from scapy.config import conf
@@ -34,23 +33,3 @@ def send_data(dst_ip, data):
     throughput = bytes_sent / elapsed_time if elapsed_time > 0 else 0
     print(f"Sent data: {bytes_sent} bytes ({bits_sent} bits), Throughput: {throughput:.2f} B/s")
     return bytes_sent, throughput
-
-def covert_send(dst_ip, hex_input=None, fixed_size=None, iface="eth0"):
-    """Send either hex input or fixed-value bytes."""
-    if fixed_size is not None:
-        # Generate bytes with all values set to 17
-        data_bytes = generate_fixed_bytes(fixed_size)
-        print(f"Generated fixed data: {fixed_size} bytes, all values: {hex(data_bytes[0])}")
-    elif hex_input is not None:
-        # Parse hex string to bytes
-        if len(hex_input) % 2 != 0:
-            raise ValueError("Hex input length must be even (e.g., 4142 for two bytes)")
-        try:
-            data_bytes = bytes.fromhex(hex_input)
-        except ValueError:
-            raise ValueError("Invalid hex string. Use format like 4142 for two bytes.")
-        print(f"Sending hex data: {[hex(b) for b in data_bytes]}")
-    else:
-        raise ValueError("Must provide either hex_input or fixed_size")
-    
-    return send_data(dst_ip, data_bytes)
