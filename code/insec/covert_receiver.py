@@ -1,4 +1,4 @@
-import covert_receive_lib as covert_channel
+import covert_receive_lib_hidden as covert_channel
 import os
 import argparse
 import time
