@@ -5,19 +5,20 @@ import numpy as np
 from scapy.all import IP, TCP, UDP, send
 from scapy.config import conf
 
-def encode_packet(bit, dst_ip,sport,dport):
+def encode_packet(socket_type, dst_ip,sport,dport):
     """Create a packet for a bit: TCP (6) for 0, UDP (17) for 1."""
-    if bit == 0:
+    if socket_type == 0:
         return IP(dst=dst_ip, proto=6) / TCP(sport=sport, dport=dport)
     else:  # bit == 1
         return IP(dst=dst_ip, proto=17) / UDP(sport=sport, dport=dport)
 
-def send_data(dst_ip,dport, sport, bit_val, Pareto_a, Pareto_b):
+# If socket_type is 0 sends TCP else sends UDP
+def send_data(dst_ip,dport, sport, socket_type, Pareto_a, Pareto_b):
     """Send data as a sequence of TCP/UDP packets encoding bits."""
     packets = []
-    burst_size = (np.random.pareto(Pareto_a) + 1) * Pareto_b
+    burst_size = int((np.random.pareto(Pareto_a) + 1) * Pareto_b)
     for index in range(burst_size):
-        packets.append(encode_packet(bit_val, dst_ip,sport,dport))
+        packets.append(encode_packet(socket_type, dst_ip,sport,dport))
     
     start_time = time.time()
     send(packets, verbose=False)

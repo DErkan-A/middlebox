@@ -3,6 +3,9 @@ import time
 from scapy.all import IP, TCP, UDP, send
 from scapy.config import conf
 
+secure_port = 12345
+insec_port = 80
+
 def generate_fixed_bytes(size, value=17):
     """Generate a bytes object of specified size with all values set to the given value."""
     return bytes([value]) * size
@@ -10,9 +13,9 @@ def generate_fixed_bytes(size, value=17):
 def encode_packet(bit, dst_ip):
     """Create a packet for a bit: TCP (6) for 0, UDP (17) for 1."""
     if bit == 0:
-        return IP(dst=dst_ip, proto=6) / TCP(sport=12345, dport=80)
+        return IP(dst=dst_ip, proto=6) / TCP(sport=secure_port, dport=insec_port)
     else:  # bit == 1
-        return IP(dst=dst_ip, proto=17) / UDP(sport=12345, dport=80)
+        return IP(dst=dst_ip, proto=17) / UDP(sport=secure_port, dport=insec_port)
 
 def send_data(dst_ip, data):
     """Send data as a sequence of TCP/UDP packets encoding bits."""

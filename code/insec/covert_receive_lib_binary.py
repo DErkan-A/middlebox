@@ -2,6 +2,9 @@ import threading
 import time
 from scapy.all import sniff, IP, TCP, UDP
 
+secure_port = 12345
+insec_port = 80
+
 class Receiver:
     def __init__(self, sender_ip):
         self.sender_ip = sender_ip
@@ -42,14 +45,29 @@ class Receiver:
         self.stop_event.set()
 
 def packet_receiver(interface, receiver):
-    """Run packet sniffing in a separate thread."""
+    """Run packet sniffing in a separate thread, but only for traffic
+    from receiver.sender_ip:src_port to receiver.receiver_ip:dst_port."""
+    # build a BPF filter that matches:
+    #  - IP packets
+    #  - src host X and src port A
+    #  - dst host Y and dst port B
+    #  - protocol is either TCP or UDP
+    bpf = (
+        f"ip "
+        f"and src host {receiver.sender_ip}"
+        f"and ("
+        f"(tcp and src port {secure_port} and dst port {insec_port}) or "
+        f"(udp and src port {secure_port} and dst port {insec_port})"
+        f")"
+    )
+
     try:
         sniff(
             iface=interface,
-            filter=f"ip and src host {receiver.sender_ip} and (tcp or udp)",
+            filter=bpf,
             prn=receiver.process_packet,
             store=False,
-            stop_filter=lambda x: receiver.stop_event.is_set()
+            stop_filter=lambda pkt: receiver.stop_event.is_set()
         )
     except Exception as e:
         print(f"Error sniffing packets: {e}. Ensure interface '{interface}' exists and has traffic.")
