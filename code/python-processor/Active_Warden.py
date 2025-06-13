@@ -127,10 +127,11 @@ class ActiveWarden:
         """
         for i, j in self._pairs:
             hi, hj = self._hits[i], self._hits[j]
-            maxh = max(hi, hj)
-            # skip if either count is zero or no packets seen
-            if maxh == 0:
+            minh = min(hi,hj)
+            #Ignore rules with less than 100 hits
+            if(minh<100):
                 continue
+            maxh = max(hi, hj)
             # if counts are within the error margin, mark to drop
             if abs(hi - hj) <= error_margin * maxh:
                 self._actions[i] = 1

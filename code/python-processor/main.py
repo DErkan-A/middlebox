@@ -6,6 +6,15 @@ import Active_Warden
 
 adjust_interval = 256
 error_margin = 0.1
+
+def print_packet(packet):
+        l4 = None
+        if packet[IP].proto == 6:
+            l4 = packet[TCP]
+        elif packet[IP].proto == 17:
+            l4 = packet[UDP]
+        print("Procotol", packet[IP].proto, "Source port: ", l4.sport, "Destination Port: ", l4.dport)
+
 async def run():
     nc = NATS()
 
@@ -18,7 +27,7 @@ async def run():
             warden.adjust_actions_for_balanced_pairs(error_margin)
         subject = msg.subject
         data = msg.data #.decode()
-        print(f"Received a message on '{subject}': {data}")
+        #print(f"Received a message on '{subject}': {data}")
         packet = Ether(data)
         #print(packet.show())
         # Publish the received message to outpktsec and outpktinsec
@@ -31,6 +40,9 @@ async def run():
                 warden.add_rule_from_packet(packet)
             if(action !=1):
                 await nc.publish("outpktinsec", msg.data)
+            else:
+                print("Dropped the packet")
+                print_packet(packet)    
         else:
             await nc.publish("outpktsec", msg.data)
    

@@ -1,63 +1,63 @@
 import threading
-import time
 from scapy.all import sniff, IP, TCP, UDP
 
 secure_port = 12345
-insec_port = 80
+insec_port  = 12345
 
 class Receiver:
     def __init__(self, sender_ip):
         self.sender_ip = sender_ip
-        self.message = bytearray()  # Shared buffer for decoded bytes
-        self.bit_buffer = []  # Temporary buffer for bits (0 or 1)
-        self.lock = threading.Lock()  # Ensure thread-safe access
-        self.stop_event = threading.Event()  # Signal to stop receiving
-        self.total_bytes = 0  # Track total bytes for throughput
+        self.message    = bytearray()  # decoded bytes
+        self.bit_buffer = []           # collected bits
+        self.lock       = threading.Lock()
+        self.stop_event = threading.Event()
+        self.total_bytes = 0
 
     def process_packet(self, pkt):
-        """Process Scapy packet to decode bit based on protocol."""
-        if IP in pkt and pkt[IP].src == self.sender_ip:
-            bit = None
-            if pkt[IP].proto == 6:  # TCP
+        """Only decode bits from TCP/UDP pkts matching secure→insec ports."""
+        # must be IP from our sender
+        if IP not in pkt or pkt[IP].src != self.sender_ip:
+            return
+
+        bit = None
+        # TCP?
+        if pkt.haslayer(TCP):
+            l4 = pkt[TCP]
+            if l4.sport == secure_port and l4.dport == insec_port:
                 bit = 0
-            elif pkt[IP].proto == 17:  # UDP
+        # UDP?
+        elif pkt.haslayer(UDP):
+            l4 = pkt[UDP]
+            if l4.sport == secure_port and l4.dport == insec_port:
                 bit = 1
 
-            if bit is not None:
-                with self.lock:
-                    self.bit_buffer.append(bit)
-                    #print(f"Received: proto={pkt[IP].proto} (bit={bit})")
-                    if len(self.bit_buffer) == 8:
-                        byte_val = sum(b << (7 - i) for i, b in enumerate(self.bit_buffer))
-                        self.message.append(byte_val)
-                        self.total_bytes += 1
-                        #print(f"Decoded byte: {hex(byte_val)}")
-                        self.bit_buffer.clear()
+        if bit is not None:
+            with self.lock:
+                self.bit_buffer.append(bit)
+                if len(self.bit_buffer) == 8:
+                    byte_val = sum(b << (7 - i) for i, b in enumerate(self.bit_buffer))
+                    self.message.append(byte_val)
+                    self.total_bytes += 1
+                    self.bit_buffer.clear()
 
     def get_message(self):
-        """Return a bytes copy of the message and clear the buffer."""
         with self.lock:
-            message_copy = bytes(self.message)
+            msg = bytes(self.message)
             self.message.clear()
-            return message_copy
+            return msg
 
     def stop(self):
         self.stop_event.set()
 
+
 def packet_receiver(interface, receiver):
-    """Run packet sniffing in a separate thread, but only for traffic
-    from receiver.sender_ip:src_port to receiver.receiver_ip:dst_port."""
-    # build a BPF filter that matches:
-    #  - IP packets
-    #  - src host X and src port A
-    #  - dst host Y and dst port B
-    #  - protocol is either TCP or UDP
+    """Sniff only secure→insecure TCP or UDP from sender_ip."""
     bpf = (
         f"ip "
-        f"and src host {receiver.sender_ip}"
+        f"and src host {receiver.sender_ip} "
         f"and ("
-        f"(tcp and src port {secure_port} and dst port {insec_port}) or "
-        f"(udp and src port {secure_port} and dst port {insec_port})"
+          f"(tcp   and src port {secure_port} and dst port {insec_port}) or "
+          f"(udp   and src port {secure_port} and dst port {insec_port})"
         f")"
     )
 
@@ -70,12 +70,12 @@ def packet_receiver(interface, receiver):
             stop_filter=lambda pkt: receiver.stop_event.is_set()
         )
     except Exception as e:
-        print(f"Error sniffing packets: {e}. Ensure interface '{interface}' exists and has traffic.")
+        print(f"Error sniffing packets: {e}")
+
 
 def start_receiver(interface, sender_ip):
-    """Start the receiver in a separate thread and return the Receiver object."""
     receiver = Receiver(sender_ip)
-    recv_thread = threading.Thread(target=packet_receiver, args=(interface, receiver))
-    recv_thread.daemon = True
-    recv_thread.start()
+    t = threading.Thread(target=packet_receiver, args=(interface, receiver))
+    t.daemon = True
+    t.start()
     return receiver

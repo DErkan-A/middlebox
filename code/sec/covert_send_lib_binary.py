@@ -4,7 +4,7 @@ from scapy.all import IP, TCP, UDP, send
 from scapy.config import conf
 
 secure_port = 12345
-insec_port = 80
+insec_port = 12345
 
 def generate_fixed_bytes(size, value=17):
     """Generate a bytes object of specified size with all values set to the given value."""
