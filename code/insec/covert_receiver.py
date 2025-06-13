@@ -37,6 +37,7 @@ def standard_receiver(receiver):
     except KeyboardInterrupt:
         print("\nStopping receiver...")
         receiver.stop()
+        print("Message length: ", len(full_message))
         print(f"The full message: {[hex(b) for b in full_message]}")
 
 if __name__ == "__main__":

@@ -1,19 +1,21 @@
 import asyncio
 from nats.aio.client import Client as NATS
 import os, random
-from scapy.all import Ether
+from scapy.all import Ether, IP, TCP, UDP
 import Active_Warden
 
+adjust_interval = 256
+error_margin = 0.1
 async def run():
     nc = NATS()
 
     warden = Active_Warden.ActiveWarden()   
-    warden.add_rule(17, 12345, 80)
-    warden.add_rule(6, 12345, 80) 
     nats_url = os.getenv("NATS_SURVEYOR_SERVERS", "nats://nats:4222")
     await nc.connect(nats_url)
 
     async def message_handler(msg):
+        if(warden._total % adjust_interval == 0):
+            warden.adjust_actions_for_balanced_pairs(error_margin)
         subject = msg.subject
         data = msg.data #.decode()
         print(f"Received a message on '{subject}': {data}")
@@ -23,12 +25,12 @@ async def run():
         delay = random.expovariate(1 / 8e-3)
         await asyncio.sleep(delay)
         if subject == "inpktsec":
-            match_result=warden.match_packet(packet)
-            print("The match result is ", match_result)
+            RID, action = match_result=warden.record_packet(packet)
             #If not match result add the packet header as a rule (Only adds TCP or UDP for now)
-            if(match_result == None):
+            if(RID == None):
                 warden.add_rule_from_packet(packet)
-            await nc.publish("outpktinsec", msg.data)
+            if(action !=1):
+                await nc.publish("outpktinsec", msg.data)
         else:
             await nc.publish("outpktsec", msg.data)
    

@@ -119,17 +119,19 @@ class ActiveWarden:
         """Return the precomputed list of (i, j) pairs."""
         return list(self._pairs)
 
-# Usage example:
-#
-# aw = ActiveWarden()
-# aw.add_rule(protocol=6, src_port=1000, dst_port=2000, action=0)   # forward
-# aw.add_rule(protocol=17, src_port=1000, dst_port=2000, action=1)  # drop
-# print(aw.get_pair_rules())  # [(0, 1)]
-#
-# def handle(pkt):
-#     idx, action = aw.record_packet(pkt)
-#     if idx is not None:
-#         print(f"Matched rule {idx} → action {action}")
-#
-# sniff(iface="eth0", filter="ip and (tcp or udp)", prn=handle, store=False)
-c
+    def adjust_actions_for_balanced_pairs(self, error_margin=0.1):
+        """
+        For each pair of rules (i, j), if their hit counts differ by no more than
+        `error_margin` fraction of the larger count (and neither is zero), set both
+        actions to drop (code 1).
+        """
+        for i, j in self._pairs:
+            hi, hj = self._hits[i], self._hits[j]
+            maxh = max(hi, hj)
+            # skip if either count is zero or no packets seen
+            if maxh == 0:
+                continue
+            # if counts are within the error margin, mark to drop
+            if abs(hi - hj) <= error_margin * maxh:
+                self._actions[i] = 1
+                self._actions[j] = 1
