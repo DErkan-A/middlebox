@@ -6,11 +6,9 @@ import time
 
 import traffic_lib as traffic
 
-def worker(dst_ip, sport, dport, pareto_a, pareto_b, stop_event):
+def worker(socket_type,dst_ip, sport, dport, pareto_a, pareto_b, stop_event):
     """Thread body: loop send_data until stop_event is set."""
     while not stop_event.is_set():
-        # randomly choose TCP (0) or UDP (1)
-        socket_type = random.choice([0, 1])
         try:
             traffic.send_data(dst_ip, dport, sport, socket_type, pareto_a, pareto_b)
         except Exception as e:
@@ -52,9 +50,10 @@ if __name__ == "__main__":
     for i in range(args.num_process):
         sport = 10000 + i
         dport = 10000 + i
+        socket_type = random.choice([0, 1])
         t = threading.Thread(
             target=worker,
-            args=(dst_ip, sport, dport, args.pareto_a, args.pareto_b, stop_event),
+            args=(socket_type,dst_ip, sport, dport, args.pareto_a, args.pareto_b, stop_event),
             daemon=True
         )
         t.start()
